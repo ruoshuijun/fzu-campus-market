@@ -1,0 +1,5 @@
+{% extends "base.html" %}{% block content %}
+<section class="hero"><span class="eyebrow">LESS WASTE, MORE CAMPUS LIFE</span><h1>让闲置，在校园里继续有用。</h1><p class="muted">书籍、数码、生活好物。找到需要的人，约在校园里交接。</p><a class="button" href="{% url 'items:create' %}">发布我的闲置</a></section>
+<div class="notice">公共基础已就绪：当前展示演示物品。搜索、发布与预订将由各成员补齐。</div>
+<div class="grid">{% for listing in page_obj %}<article class="item"><span class="category">{{ listing.get_category_display }} / {{ listing.campus }}</span><h2><a href="{% url 'items:detail' listing.pk %}">{{ listing.title }}</a></h2><p class="muted">{{ listing.description|truncatechars:65 }}</p><div class="price">¥ {{ listing.price }}</div><span class="tag">{{ listing.get_status_display }} · {{ listing.seller.first_name|default:listing.seller.username }}</span></article>{% empty %}<p>暂时没有物品，运行 seed_demo 可导入演示数据。</p>{% endfor %}</div>
+{% include "pagination.html" %}{% endblock %}

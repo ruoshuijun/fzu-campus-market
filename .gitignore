@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+# Local secrets and runtime
+.env
+.env.*
+!.env.example
+*.sqlite3
+pgdata/
+media/
+staticfiles/
+*.log
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+# Large recordings: publish link + checksum instead
+*.mp4
+*.mkv
+*.mov
+*.zip
+db.sqlite3-*

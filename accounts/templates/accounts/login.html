@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}登录 · 福大闲置{% endblock %}
+{% block content %}<section class="panel narrow"><p class="eyebrow">WELCOME BACK</p><h1>登录福大闲置</h1>
+<p class="muted">使用本地演示账号，开始查看校园闲置物品。</p>
+<form method="post">{% csrf_token %}{{ form.as_p }}<input type="hidden" name="next" value="{{ next }}"><button type="submit">登录</button></form>
+<p><a href="{% url 'accounts:register' %}">还没有账号？注册</a></p></section>{% endblock %}

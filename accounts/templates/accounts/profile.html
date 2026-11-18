@@ -1,0 +1,1 @@
+{% extends "base.html" %}{% block content %}<section class="panel"><h1>个人资料</h1><p>账号：{{ user.username }}</p><p>昵称：{{ user.first_name|default:"尚未设置" }}</p><div class="notice">成员一继续完成昵称修改、注册与账号测试。</div></section>{% endblock %}

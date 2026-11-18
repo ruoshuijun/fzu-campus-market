@@ -1,0 +1,28 @@
+{% load static %}
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}福大闲置{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/site.css' %}">
+</head>
+<body>
+<header class="site-header"><div class="container nav">
+  <a class="brand" href="{% url 'items:list' %}">福大闲置<span>FZU MARKET</span></a>
+  <nav aria-label="主导航">
+    <a href="{% url 'items:list' %}">逛闲置</a><a href="{% url 'items:create' %}">发布物品</a>
+    <a href="{% url 'items:mine' %}">我的发布</a><a href="{% url 'bookings:mine' %}">我的预订</a>
+    {% if user.is_staff %}<a href="{% url 'moderation:dashboard' %}">管理台</a>{% endif %}
+  </nav>
+  <div class="account-nav">{% if user.is_authenticated %}
+    <a href="{% url 'accounts:profile' %}">{{ user.first_name|default:user.username }}</a>
+    <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="text-button">退出</button></form>
+  {% else %}<a href="{% url 'accounts:login' %}">登录</a><a href="{% url 'accounts:register' %}">注册</a>{% endif %}</div>
+</div></header>
+<main class="container">
+  {% for message in messages %}<div class="notice" role="status">{{ message }}</div>{% endfor %}
+  {% block content %}{% endblock %}
+</main>
+<footer class="container footer">福州大学课程项目 · 模拟账号与数据 · 线下交接</footer>
+{% block scripts %}{% endblock %}
+</body></html>
