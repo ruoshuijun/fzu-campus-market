@@ -1,0 +1,37 @@
+{
+  "group": "Y-direct",
+  "checks": [
+    {
+      "check": "anonymous_login_redirect",
+      "passed": true
+    },
+    {
+      "check": "owner_filter_and_default_page",
+      "passed": true
+    },
+    {
+      "check": "status_filter_and_selected_value",
+      "passed": true
+    },
+    {
+      "check": "second_page_and_filter_retention",
+      "passed": true
+    },
+    {
+      "check": "safe_invalid_parameters",
+      "passed": true
+    },
+    {
+      "check": "empty_result_hint",
+      "passed": true
+    },
+    {
+      "check": "read_does_not_create_records",
+      "passed": true
+    },
+    {
+      "check": "django_and_migration_check",
+      "passed": true
+    }
+  ]
+}

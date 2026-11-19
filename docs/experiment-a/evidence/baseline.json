@@ -1,0 +1,8 @@
+{
+  "commit": "83dbbb0978bb880c221020193f4e4dd451d0a7ba",
+  "order": [
+    "Y-direct",
+    "X-bmad"
+  ],
+  "model": "gpt-6.2-sol"
+}

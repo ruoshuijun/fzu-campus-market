@@ -1,0 +1,85 @@
+diff --git a/bookings/templates/bookings/mine.html b/bookings/templates/bookings/mine.html
+index 3759275..417ec89 100644
+--- a/bookings/templates/bookings/mine.html
++++ b/bookings/templates/bookings/mine.html
+@@ -1 +1,42 @@
+-{% extends "base.html" %}{% block content %}<section class="hero"><h1>我的预订</h1><p class="muted">成员三继续实现预订、取消、到期与双方确认。</p></section><div class="grid">{% for reservation in reservations %}<article class="item"><h2>{{ reservation.listing.title }}</h2><p>{{ reservation.get_status_display }}</p><p>到期：{{ reservation.expires_at|date:"Y-m-d H:i" }}</p></article>{% empty %}<p>暂无预订。可以先用演示买家 student2 查看预置记录。</p>{% endfor %}</div>{% endblock %}
++{% extends "base.html" %}
++{% block content %}
++<section class="hero">
++  <h1>我的预订</h1>
++  <form method="get" action="{% url 'bookings:mine' %}">
++    <label for="reservation-status">预订状态</label>
++    <select name="status" id="reservation-status">
++      <option value=""{% if not selected_status %} selected{% endif %}>全部状态</option>
++      {% for value, label in status_choices %}
++        <option value="{{ value }}"{% if value == selected_status %} selected{% endif %}>{{ label }}</option>
++      {% endfor %}
++    </select>
++    <button type="submit">筛选</button>
++  </form>
++</section>
++<div class="grid">
++  {% for reservation in page_obj %}
++    <article class="item">
++      <h2>{{ reservation.listing.title }}</h2>
++      <p>{{ reservation.get_status_display }}</p>
++      <p>到期：{{ reservation.expires_at|date:"Y-m-d H:i" }}</p>
++    </article>
++  {% empty %}
++    {% if selected_status %}
++      <p>没有符合当前状态的预订。</p>
++    {% else %}
++      <p>暂无预订。</p>
++    {% endif %}
++  {% endfor %}
++</div>
++{% if page_obj.has_other_pages %}
++  <nav class="pagination" aria-label="预订分页">
++    {% if page_obj.has_previous %}
++      <a href="?page={{ page_obj.previous_page_number }}{% if selected_status %}&amp;status={{ selected_status|urlencode }}{% endif %}">上一页</a>
++    {% endif %}
++    <span>第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 页</span>
++    {% if page_obj.has_next %}
++      <a href="?page={{ page_obj.next_page_number }}{% if selected_status %}&amp;status={{ selected_status|urlencode }}{% endif %}">下一页</a>
++    {% endif %}
++  </nav>
++{% endif %}
++{% endblock %}
+diff --git a/bookings/views.py b/bookings/views.py
+index 9c6b251..5144cf9 100644
+--- a/bookings/views.py
++++ b/bookings/views.py
+@@ -1,5 +1,6 @@
+ import uuid
+ from django.contrib.auth.decorators import login_required
++from django.core.paginator import Paginator
+ from django.shortcuts import render
+ from django.views.decorators.http import require_POST
+ from core.models import Reservation
+@@ -9,7 +10,24 @@ from . import services
+ 
+ @login_required
+ def mine(request):
+-    return render(request, "bookings/mine.html", {"reservations": Reservation.objects.filter(buyer=request.user).select_related("listing")})
++    status = request.GET.get("status", "")
++    if status not in Reservation.Status.values:
++        status = ""
++
++    reservations = (
++        Reservation.objects.filter(buyer=request.user)
++        .select_related("listing")
++        .order_by("-created_at", "-pk")
++    )
++    if status:
++        reservations = reservations.filter(status=status)
++
++    page_obj = Paginator(reservations, 20).get_page(request.GET.get("page"))
++    return render(request, "bookings/mine.html", {
++        "page_obj": page_obj,
++        "status_choices": Reservation.Status.choices,
++        "selected_status": status,
++    })
+ 
+ 
+ @require_POST

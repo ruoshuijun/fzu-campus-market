@@ -1,0 +1,42 @@
+{
+  "group": "Y-direct",
+  "checks": [
+    {
+      "check": "anonymous_login_redirect",
+      "passed": true
+    },
+    {
+      "check": "owner_filter_and_default_page",
+      "passed": false,
+      "detail": "expected 20 rows in order, found 43"
+    },
+    {
+      "check": "status_filter_and_selected_value",
+      "passed": false,
+      "detail": "expected 20 rows in order, found 43"
+    },
+    {
+      "check": "second_page_and_filter_retention",
+      "passed": false,
+      "detail": "next link does not keep status"
+    },
+    {
+      "check": "safe_invalid_parameters",
+      "passed": false,
+      "detail": "expected 20 rows in order, found 43"
+    },
+    {
+      "check": "empty_result_hint",
+      "passed": false,
+      "detail": "expected 0 rows in order, found 43"
+    },
+    {
+      "check": "read_does_not_create_records",
+      "passed": true
+    },
+    {
+      "check": "django_and_migration_check",
+      "passed": true
+    }
+  ]
+}

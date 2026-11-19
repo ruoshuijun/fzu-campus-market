@@ -1,0 +1,30 @@
+{
+  "X-bmad": {
+    "implementation": {
+      "seconds": 64.6746559,
+      "exit": 0
+    },
+    "acceptance": {
+      "seconds": 1.4995189,
+      "exit": 0
+    },
+    "independent_review": {
+      "seconds": 12.8383193,
+      "exit": 0
+    }
+  },
+  "Y-direct": {
+    "implementation": {
+      "seconds": 32.8526033,
+      "exit": 0
+    },
+    "acceptance": {
+      "seconds": 1.4561609,
+      "exit": 0
+    },
+    "independent_review": {
+      "seconds": 11.2449346,
+      "exit": 0
+    }
+  }
+}

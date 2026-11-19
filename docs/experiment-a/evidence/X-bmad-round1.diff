@@ -1,0 +1,188 @@
+diff --git a/items/templates/items/mine.html b/items/templates/items/mine.html
+index e322b67..2fe427f 100644
+--- a/items/templates/items/mine.html
++++ b/items/templates/items/mine.html
+@@ -1 +1,43 @@
+-{% extends "base.html" %}{% block content %}<section class="hero"><h1>我的发布</h1><p class="muted">成员二继续补齐编辑、上下架和交接入口。</p></section><div class="grid">{% for listing in listings %}<article class="item"><h2>{{ listing.title }}</h2><p class="price">¥ {{ listing.price }}</p><p>{{ listing.get_status_display }}</p>{% include "bookings/_seller_actions.html" %}</article>{% empty %}<p>你还没有发布物品。</p>{% endfor %}</div>{% endblock %}
++{% extends "base.html" %}
++{% block content %}
++<section class="hero">
++  <h1>我的发布</h1>
++  <form method="get" action="{% url 'items:mine' %}">
++    <label for="listing-status">发布状态</label>
++    <select id="listing-status" name="status">
++      <option value=""{% if not selected_status %} selected{% endif %}>全部状态</option>
++      {% for value, label in status_choices %}
++        <option value="{{ value }}"{% if selected_status == value %} selected{% endif %}>{{ label }}</option>
++      {% endfor %}
++    </select>
++    <button type="submit">筛选</button>
++  </form>
++</section>
++<div class="grid">
++  {% for listing in page_obj %}
++    <article class="item">
++      <h2>{{ listing.title }}</h2>
++      <p class="price">¥ {{ listing.price }}</p>
++      <p>{{ listing.get_status_display }}</p>
++      {% include "bookings/_seller_actions.html" %}
++    </article>
++  {% empty %}
++    {% if selected_status %}
++      <p>当前状态下没有发布记录。</p>
++    {% else %}
++      <p>你还没有发布物品。</p>
++    {% endif %}
++  {% endfor %}
++</div>
++{% if page_obj.has_other_pages %}
++  <nav class="pagination" aria-label="我的发布分页">
++    {% if page_obj.has_previous %}
++      <a href="?page={{ page_obj.previous_page_number }}{% if selected_status %}&amp;status={{ selected_status|urlencode }}{% endif %}">上一页</a>
++    {% endif %}
++    <span>第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 页</span>
++    {% if page_obj.has_next %}
++      <a href="?page={{ page_obj.next_page_number }}{% if selected_status %}&amp;status={{ selected_status|urlencode }}{% endif %}">下一页</a>
++    {% endif %}
++  </nav>
++{% endif %}
++{% endblock %}
+diff --git a/items/test_mine.py b/items/test_mine.py
+new file mode 100644
+index 0000000..5a9d07d
+--- /dev/null
++++ b/items/test_mine.py
+@@ -0,0 +1,103 @@
++from decimal import Decimal
++
++from django.contrib.auth import get_user_model
++from django.test import TestCase
++from django.urls import reverse
++from django.utils import timezone
++
++from core.models import Listing
++
++
++class MineListingsTests(TestCase):
++    @classmethod
++    def setUpTestData(cls):
++        user_model = get_user_model()
++        cls.seller = user_model.objects.create_user(username="seller")
++        cls.other_seller = user_model.objects.create_user(username="other-seller")
++
++    def setUp(self):
++        self.url = reverse("items:mine")
++        self.client.force_login(self.seller)
++
++    def make_listing(self, title, status=Listing.Status.AVAILABLE, seller=None):
++        return Listing.objects.create(
++            seller=seller if seller is not None else self.seller,
++            title=title,
++            price=Decimal("10.00"),
++            meeting_place="图书馆",
++            status=status,
++        )
++
++    def test_anonymous_user_redirects_to_login(self):
++        self.client.logout()
++        self.assertRedirects(
++            self.client.get(self.url),
++            f"{reverse('accounts:login')}?next={self.url}",
++            fetch_redirect_response=False,
++        )
++
++    def test_default_and_unknown_status_show_only_own_listings_newest_first(self):
++        older = self.make_listing("较早的发布", Listing.Status.HIDDEN)
++        newer = self.make_listing("较新的发布", Listing.Status.RESERVED)
++        Listing.objects.filter(pk=older.pk).update(
++            created_at=newer.created_at - timezone.timedelta(days=1)
++        )
++        self.make_listing("他人的发布", seller=self.other_seller)
++
++        for params in ({}, {"status": "UNKNOWN"}):
++            with self.subTest(params=params):
++                response = self.client.get(self.url, params)
++                self.assertEqual(response.status_code, 200)
++                self.assertEqual(list(response.context["page_obj"]), [newer, older])
++                self.assertContains(response, '<option value="" selected>全部状态</option>', html=True)
++                self.assertNotContains(response, "他人的发布")
++                self.assertTemplateUsed(response, "bookings/_seller_actions.html")
++
++    def test_each_status_filters_only_own_listings_and_is_selected(self):
++        own_listings = {}
++        for value, label in Listing.Status.choices:
++            own_listings[value] = self.make_listing(f"本人的{label}物品", value)
++            self.make_listing(f"他人的{label}物品", value, self.other_seller)
++
++        for value, label in Listing.Status.choices:
++            with self.subTest(status=value):
++                response = self.client.get(self.url, {"status": value})
++                self.assertEqual(response.status_code, 200)
++                self.assertEqual(list(response.context["page_obj"]), [own_listings[value]])
++                self.assertContains(response, f'<option value="{value}" selected>{label}</option>', html=True)
++
++    def test_filtered_pages_keep_status_and_use_primary_key_for_ties(self):
++        status = Listing.Status.RESERVED
++        listings = [self.make_listing(f"本人发布 {number}", status) for number in range(21)]
++        Listing.objects.filter(pk__in=[listing.pk for listing in listings]).update(
++            created_at=timezone.now()
++        )
++        self.make_listing("其他状态")
++        self.make_listing("其他卖家的同状态物品", status, self.other_seller)
++        expected = list(reversed(listings))
++
++        first = self.client.get(self.url, {"status": status})
++        second = self.client.get(self.url, {"status": status, "page": "2"})
++        self.assertEqual(first.status_code, 200)
++        self.assertEqual(second.status_code, 200)
++        self.assertEqual(list(first.context["page_obj"]), expected[:20])
++        self.assertEqual(list(second.context["page_obj"]), expected[20:])
++        self.assertContains(first, '<a href="?page=2&amp;status=RESERVED">下一页</a>', html=True)
++        self.assertContains(second, '<a href="?page=1&amp;status=RESERVED">上一页</a>', html=True)
++        self.assertContains(second, '<option value="RESERVED" selected>已预订</option>', html=True)
++
++        for page, expected_number in (("abc", 1), ("0", 1), ("-1", 1), ("999", 2)):
++            with self.subTest(page=page):
++                response = self.client.get(self.url, {"status": status, "page": page})
++                self.assertEqual(response.status_code, 200)
++                self.assertEqual(response.context["page_obj"].number, expected_number)
++
++    def test_empty_and_no_matching_listings_have_messages(self):
++        self.make_listing("其他卖家的物品", seller=self.other_seller)
++        empty = self.client.get(self.url)
++        self.assertContains(empty, "你还没有发布物品。")
++
++        self.make_listing("本人的可预订物品")
++        no_match = self.client.get(self.url, {"status": Listing.Status.HIDDEN, "page": "999"})
++        self.assertContains(no_match, "当前状态下没有发布记录。")
++        self.assertEqual(no_match.context["page_obj"].number, 1)
+diff --git a/items/views.py b/items/views.py
+index e37de0e..20f50a1 100644
+--- a/items/views.py
++++ b/items/views.py
+@@ -24,7 +24,24 @@ def create(request):
+ 
+ @login_required
+ def mine(request):
+-    return render(request, "items/mine.html", {"listings": Listing.objects.filter(seller=request.user)})
++    queryset = Listing.objects.filter(seller=request.user)
++    selected_status = request.GET.get("status", "")
++    if selected_status in Listing.Status.values:
++        queryset = queryset.filter(status=selected_status)
++    else:
++        selected_status = ""
++
++    try:
++        page_number = max(1, int(request.GET.get("page", "1")))
++    except ValueError:
++        page_number = 1
++
++    paginator = Paginator(queryset.order_by("-created_at", "-pk"), 20)
++    return render(request, "items/mine.html", {
++        "page_obj": paginator.get_page(page_number),
++        "selected_status": selected_status,
++        "status_choices": Listing.Status.choices,
++    })
+ 
+ 
+ @login_required
